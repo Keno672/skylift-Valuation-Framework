@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skylift Protocol — Valuation Calculator (Equity & SKLT)</title>
+<style>
+  :root{
+    --bg:#0b0f14;
+    --panel:#121821;
+    --ink:#e6eef8;
+    --muted:#9ab0c7;
+    --accent:#4bd3ff;
+    --accent2:#7cffb7;
+    --warn:#ffd166;
+    --danger:#ff6b6b;
+    --ok:#4cd137;
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji";margin:0}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px 48px}
+  header{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;margin:8px 0 20px}
+  h1{font-size:24px;margin:0}
+  .badge{font-size:12px;color:var(--bg);background:var(--accent);padding:4px 8px;border-radius:999px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid-2{grid-template-columns:1fr 1fr}}
+  section{background:var(--panel);border:1px solid #1b2330;border-radius:16px;padding:16px 16px 12px}
+  section h2{font-size:18px;margin:0 0 8px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  input[type=number],input[type=text]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #203045;background:#0c121a;color:var(--ink);}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+  .card{background:#0e1520;border:1px solid #1b2330;border-radius:12px;padding:12px}
+  .card h3{margin:0 0 6px;font-size:14px;color:var(--muted)}
+  .big{font-size:20px;font-weight:700}
+  .muted{color:var(--muted)}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+  table{width:100%;border-collapse:collapse;margin-top:6px}
+  th,td{padding:8px 6px;border-bottom:1px solid #1b2330;text-align:right;font-variant-numeric:tabular-nums}
+  th:first-child, td:first-child{text-align:left}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#0c1926;border:1px solid #14314a;color:var(--accent)}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  button{background:linear-gradient(180deg,#17324a,#112235);color:#e9f4ff;border:1px solid #1f3a54;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+  button.secondary{background:#101925}
+  button.good{background:linear-gradient(180deg,#1f5536,#173e28);border-color:#215a3a}
+  .note{font-size:12px;color:var(--muted);margin-top:6px}
+  .flex{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .tag{font-size:12px;color:#0b1a12;background:#132a1e;border:1px solid #1d3a2b;padding:4px 8px;border-radius:999px}
+  .copy{cursor:pointer}
+  .hl{color:var(--accent2);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Skylift Protocol — Valuation Calculator</h1>
+    <span class="badge">v1.0 · October 2025</span>
+  </header>
+
+  <section>
+    <h2>Inputs</h2>
+    <div class="grid grid-2">
+      <div>
+        <label>Company Valuation (€)</label>
+        <input id="companyVal" type="number" step="1000" value="5000000">
+      </div>
+      <div class="row">
+        <div>
+          <label>SKLT Treasury Reference Price (€)</label>
+          <input id="tokenPrice" type="number" step="0.01" value="0.10">
+        </div>
+        <div>
+          <label>Total SKLT Supply</label>
+          <input id="totalSupply" type="number" step="1000" value="100000000">
+        </div>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="card"><h3>1% Equity (now)</h3><div class="big mono" id="onePctEquity">€50,000</div><div class="muted">= Company × 1%</div></div>
+      <div class="card"><h3>1% Tokens (now)</h3><div class="big mono" id="onePctTokens">€100,000</div><div class="muted">= Supply × 1% × Price</div></div>
+      <div class="card"><h3>Parity (1% Equity ≈ SKLT)</h3><div class="big mono" id="equityToSklt">500,000 SKLT</div><div class="muted">= (1% Equity €) / Price</div></div>
+      <div class="card"><h3>Equity : Token (value ratio)</h3><div class="big mono" id="ratio">1 : 2</div><div class="muted">≈ (1% Equity €) : (1% Tokens €)</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Valuation Tiers</h2>
+    <table id="tiers">
+      <thead>
+        <tr><th>Tier</th><th>Company Value (€)</th><th>1% Equity (€)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Pre-Seed (Now)</td><td class="mono">€5,000,000</td><td class="mono">€50,000</td></tr>
+        <tr><td>Seed (Post-Accelerators)</td><td class="mono">€10,000,000</td><td class="mono">€100,000</td></tr>
+        <tr><td>Series A (Scaling)</td><td class="mono">€25,000,000</td><td class="mono">€250,000</td></tr>
+      </tbody>
+    </table>
+    <div class="note">Update the top inputs and the KPIs refresh automatically. You can also export the current snapshot.</div>
+    <div class="btns">
+      <button id="exportCSV">Export Snapshot (CSV)</button>
+      <button id="exportJSON" class="secondary">Export Snapshot (JSON)</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Role-based Allocations (editable)</h2>
+    <table id="roles">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Equity %</th>
+          <th>Tokens %</th>
+          <th>€ Equity (now)</th>
+          <th>SKLT Units</th>
+          <th>€ Tokens (now)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Founders (Ken &amp; Darragh)</td>
+          <td><input data-eq class="pct" type="number" step="0.01" value="5"></td>
+          <td><input data-tk class="pct" type="number" step="0.01" value="5"></td>
+          <td class="mono euro"></td>
+          <td class="mono sklt"></td>
+          <td class="mono euroT"></td>
+        </tr>
+        <tr>
+          <td>Core Team (CTO, CFO, COO, CIO)</td>
+          <td><input data-eq class="pct" type="number" step="0.01" value="3.0"></td>
+          <td><input data-tk class="pct" type="number" step="0.01" value="3.0"></td>
+          <td class="mono euro"></td>
+          <td class="mono sklt"></td>
+          <td class="mono euroT"></td>
+        </tr>
+        <tr>
+          <td>Advisors (pooled)</td>
+          <td><input data-eq class="pct" type="number" step="0.01" value="0"></td>
+          <td><input data-tk class="pct" type="number" step="0.01" value="2.0"></td>
+          <td class="mono euro"></td>
+          <td class="mono sklt"></td>
+          <td class="mono euroT"></td>
+        </tr>
+        <tr>
+          <td>Strategic Partners (pooled)</td>
+          <td><input data-eq class="pct" type="number" step="0.01" value="0.5"></td>
+          <td><input data-tk class="pct" type="number" step="0.01" value="1.0"></td>
+          <td class="mono euro"></td>
+          <td class="mono sklt"></td>
+          <td class="mono euroT"></td>
+        </tr>
+        <tr>
+          <td>Drone Contractors (per corridor pool)</td>
+          <td><input data-eq class="pct" type="number" step="0.01" value="0"></td>
+          <td><input data-tk class="pct" type="number" step="0.01" value="0.25"></td>
+          <td class="mono euro"></td>
+          <td class="mono sklt"></td>
+          <td class="mono euroT"></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">Tip: You can split pooled percentages internally later (e.g., Advisors each 0.10–0.25%).</div>
+  </section>
+
+  <section>
+    <h2>MOU / Investor Clause (auto-generated)</h2>
+    <p class="muted">Click to copy.</p>
+    <div class="card copy" id="mouText"></div>
+    <div class="btns"><button id="copyBtn" class="good">Copy Clause</button></div>
+  </section>
+
+  <section>
+    <h2>Portal Formulas</h2>
+    <div class="flex">
+      <span class="tag">current_token_value = token_price_eur × token_allocation</span>
+      <span class="tag">current_equity_value = company_valuation_eur × (equity_percent / 100)</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Audit Trail</h2>
+    <div id="audit" class="note mono">No changes yet.</div>
+    <div class="btns">
+      <button id="reset">Reset to Defaults</button>
+    </div>
+  </section>
+</div>
+
+<script>
+function fmtEUR(n){
+  if (!isFinite(n)) return "€0";
+  return new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n);
+}
+function fmtEURe(n){
+  if (!isFinite(n)) return "€0.00";
+  return new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+}
+function fmtNum(n){
+  return new Intl.NumberFormat('en-IE').format(Math.round(n));
+}
+
+const companyVal = document.getElementById('companyVal');
+const tokenPrice = document.getElementById('tokenPrice');
+const totalSupply = document.getElementById('totalSupply');
+
+const onePctEquity = document.getElementById('onePctEquity');
+const onePctTokens = document.getElementById('onePctTokens');
+const equityToSklt = document.getElementById('equityToSklt');
+const ratio = document.getElementById('ratio');
+const rolesTable = document.getElementById('roles').querySelector('tbody');
+const mouText = document.getElementById('mouText');
+const audit = document.getElementById('audit');
+
+let historyLog = [];
+
+function logAudit(msg){
+  const stamp = new Date().toISOString().replace('T',' ').slice(0,19);
+  historyLog.unshift(`[${stamp}] ${msg}`);
+  audit.textContent = historyLog.slice(0,10).join(' • ');
+}
+
+function refresh(){
+  const cv = parseFloat(companyVal.value||0);
+  const tp = parseFloat(tokenPrice.value||0);
+  const ts = parseFloat(totalSupply.value||0);
+
+  const oneEquity = cv * 0.01;
+  const oneTokenVal = ts * 0.01 * tp;
+  onePctEquity.textContent = fmtEUR(oneEquity);
+  onePctTokens.textContent = fmtEUR(oneTokenVal);
+  const skltForOneEquity = tp>0 ? oneEquity / tp : 0;
+  equityToSklt.textContent = `${fmtNum(skltForOneEquity)} SKLT`;
+  const r = oneEquity>0 ? (oneTokenVal/oneEquity) : 0;
+  ratio.textContent = `1 : ${ (r||0).toFixed(2).replace(/\.00$/,'') }`;
+
+  // update roles
+  rolesTable.querySelectorAll('tr').forEach(tr=>{
+    const eqPct = parseFloat(tr.querySelector('input[data-eq]').value||0);
+    const tkPct = parseFloat(tr.querySelector('input[data-tk]').value||0);
+
+    const euro = cv * (eqPct/100);
+    const sklt = ts * (tkPct/100);
+    const euroT = sklt * tp;
+
+    tr.querySelector('.euro').textContent = fmtEUR(euro);
+    tr.querySelector('.sklt').textContent = fmtNum(sklt);
+    tr.querySelector('.euroT').textContent = fmtEUR(euroT);
+  });
+
+  // MOU text
+  mouText.textContent =
+    `For the purposes of this agreement, Skylift Protocol’s current pre-money valuation is fixed at ${fmtEUR(cv)}, `+
+    `establishing 1% equity equivalence at ${fmtEUR(oneEquity)}. The SKLT Treasury Reference Price is `+
+    `${fmtEURe(tp)}, establishing 1% token equivalence at ${fmtNum(ts*0.01)} SKLT (≈ ${fmtEUR(oneTokenVal)}). `+
+    `These values shall adjust proportionally following each funding round or token listing.`;
+}
+
+['change','input'].forEach(ev=>{
+  [companyVal,tokenPrice,totalSupply].forEach(el=>el.addEventListener(ev,()=>{
+    refresh();
+    logAudit(`Inputs changed: Company=${fmtEUR(parseFloat(companyVal.value||0))}, Token=${fmtEURe(parseFloat(tokenPrice.value||0))}, Supply=${fmtNum(parseFloat(totalSupply.value||0))}`);
+  }));
+  rolesTable.querySelectorAll('input').forEach(el=>el.addEventListener(ev,()=>{
+    refresh();
+    logAudit('Role percentages updated.');
+  }));
+});
+
+document.getElementById('copyBtn').addEventListener('click',()=>{
+  const txt = mouText.textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    logAudit('MOU clause copied to clipboard.');
+  });
+});
+
+function makeSnapshot(){
+  const data = {
+    timestamp:new Date().toISOString(),
+    companyVal:parseFloat(companyVal.value||0),
+    tokenPrice:parseFloat(tokenPrice.value||0),
+    totalSupply:parseFloat(totalSupply.value||0),
+    roles:[...rolesTable.querySelectorAll('tr')].map(tr=>{
+      return {
+        category: tr.children[0].textContent.trim(),
+        equityPct: parseFloat(tr.querySelector('input[data-eq]').value||0),
+        tokenPct: parseFloat(tr.querySelector('input[data-tk]').value||0)
+      }
+    })
+  };
+  return data;
+}
+
+function download(filename, text, type='text/plain'){
+  const blob = new Blob([text], {type});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+document.getElementById('exportJSON').addEventListener('click',()=>{
+  const data = makeSnapshot();
+  download('skylift_valuation_snapshot.json', JSON.stringify(data,null,2), 'application/json');
+  logAudit('Exported JSON snapshot.');
+});
+
+document.getElementById('exportCSV').addEventListener('click',()=>{
+  const d = makeSnapshot();
+  const rows = [
+    ['timestamp', d.timestamp],
+    ['company_eur', d.companyVal],
+    ['token_price_eur', d.tokenPrice],
+    ['total_supply', d.totalSupply],
+    [],
+    ['category','equity_pct','token_pct']
+  ];
+  d.roles.forEach(r=>rows.push([r.category, r.equityPct, r.tokenPct]));
+  const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+  download('skylift_valuation_snapshot.csv', csv, 'text/csv');
+  logAudit('Exported CSV snapshot.');
+});
+
+document.getElementById('reset').addEventListener('click',()=>{
+  companyVal.value = 5000000;
+  tokenPrice.value = 0.10;
+  totalSupply.value = 100000000;
+  rolesTable.querySelectorAll('tr').forEach((tr,i)=>{
+    const defs = [
+      [5,5],[3.0,3.0],[0,2.0],[0.5,1.0],[0,0.25]
+    ];
+    tr.querySelector('input[data-eq]').value = defs[i][0];
+    tr.querySelector('input[data-tk]').value = defs[i][1];
+  });
+  refresh();
+  logAudit('Reset to defaults.');
+});
+
+refresh();
+logAudit('Loaded defaults.');
+</script>
+</body>
+</html>
